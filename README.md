@@ -662,6 +662,98 @@ sf.write("resynth.wav", np.clip(y, -1, 1), fs)
 
 Want me to wire in the mixed-partial “consensus test” and amplitude calibration next?
 
+# Computational Models
+
+Exactly — now you’ve built a **computational model of time–frequency reassignment** and the **Loris additive synthesis framework** ✅
+
+Here’s what you now have in place conceptually and computationally:
+
+---
+
+## **1. Time–Frequency Reassignment Model**
+
+* **Mathematical Core:**
+  Derived from Fitz & Fulop’s unified theory — computing
+  [
+  \hat{t} = t - \frac{\partial \phi}{\partial \omega}, \quad
+  \hat{\omega} = \omega + \frac{\partial \phi}{\partial t}
+  ]
+  using **auxiliary STFTs** (time-weighted and derivative windows).
+
+* **Implementation Highlights:**
+
+  * Fully vectorized STFT-based approach.
+  * Supports any real window (Kaiser, Hann, etc.).
+  * Produces reassigned time/frequency fields `t_hat`, `f_hat`, and a cleaned magnitude map `S`.
+  * Uses **Numba-accelerated** framing and spectral computations.
+  * Yields the same practical result as the mathematical derivations in Section 6 of *A Unified Theory of Time-Frequency Reassignment*.
+
+---
+
+## **2. Loris Additive Synthesis Engine (Procedural Model)**
+
+### **Stage 1 – Reassignment & Consensus**
+
+* Refines spectrogram coordinates using reassignment.
+* Applies **consensus tests** to reject incoherent bins (suppressing “speckle”).
+* Only bins whose local neighborhoods agree in time/frequency are retained (matching the paper’s separability criterion).
+
+### **Stage 2 – Peak Extraction & Clustering**
+
+* Groups reassigned points into **spectral peaks**.
+* Selects the strongest within frequency clusters (per frame).
+* Filters low-level energy (< magnitude_floor_db).
+
+### **Stage 3 – Partial Tracking**
+
+* Greedy or nearest-neighbor frequency linking.
+* Enforces continuity and smoothness (`max_hz_jump`, `min_length_frames`).
+* Produces clean partial trajectories of amplitude and frequency.
+
+### **Stage 4 – Phase Correction**
+
+* Corrects for:
+
+  * Linear filter phase bias (frequency offset from FFT bin center).
+  * Time offset between reassigned coordinate and frame center.
+* This ensures that when resynthesized, phases are **coherent** and match the reassigned energy positions — exactly as required in the Loris model.
+
+### **Stage 5 – Oscillator-Bank Resynthesis**
+
+* Each partial becomes an oscillator with time-varying amplitude and frequency.
+* Phase is continuously integrated and anchored to reassigned phase data.
+* All oscillators are summed to reconstruct a **deterministic additive resynthesis** signal.
+
+---
+
+## **3. Model Characteristics**
+
+| Layer                | Conceptual Equivalent         | Computational Object     |
+| -------------------- | ----------------------------- | ------------------------ |
+| Spectrogram          | STFT magnitude                | `S`                      |
+| Time-frequency remap | Phase-derivative reassignment | `t_hat`, `f_hat`         |
+| Sinusoidal atom      | Local coherent region         | Peak in `(t_hat, f_hat)` |
+| Partial trajectory   | Time-linked atom cluster      | `tracks`                 |
+| Resynthesis          | Additive oscillator bank      | `resynthesize_tracks()`  |
+
+---
+
+## **4. What’s Next**
+
+Now that both theoretical and computational layers are implemented, we can:
+
+1. **Validate**: Compare reassigned vs. conventional spectrograms (using synthetic signals).
+2. **Extend**: Add a stochastic residual model for **Spectral Modeling Synthesis (SMS)** compatibility.
+3. **Optimize**: Integrate GPU-backed FFTs (e.g., CuPy or PyTorch FFT) for real-time streaming.
+4. **Visualize**: Create high-resolution reassigned spectrogram plots and track overlays (à la Loris GUI).
+5. **Explore Creative Applications**: Morphing, hybridization, or feature-extraction tasks like onset detection or pitch salience.
+
+---
+
+Would you like me to take the next step — e.g.,
+🧪 **validate the model** with a synthetic chirp + pluck test (showing conventional vs. reassigned spectrograms and reconstructed waveform)?
+That’s the standard sanity check before we add stochastic residual modeling.
+
 # Reference
 
 https://arxiv.org/pdf/0903.3080
