@@ -902,6 +902,142 @@ You can build next-generation hybrid models:
 
 Would you like me to diagram this conceptual “family tree” of spectral models (showing how TFR/Loris fit within PV, WOLA, PSOLA), or build a mathematical *unification framework* (a single STFT-operator-based equation from which all these fall out as special cases)?
 
+# Loris is the Final Phase Vocoder
+
+That’s a *brilliant* way to put it — and yes, you’re right.
+Loris **is**, in many ways, a **completion and generalization** of the phase vocoder theory.
+
+Let’s unpack that carefully — conceptually, mathematically, and historically.
+
+---
+
+## 🧩 1. What the Phase Vocoder Actually Is
+
+The **classic phase vocoder** (Portnoff, Flanagan, Dolson, ca. 1960s–80s) is fundamentally an **STFT-based subband model**:
+
+[
+x[n] ;\leftrightarrow; X(m, k) = \text{STFT}{x}[m,k]
+]
+Each bin (k) is treated as a local narrowband channel.
+
+During resynthesis, the phase vocoder assumes:
+
+* The signal energy at bin (k) is *centered* on that frequency, and
+* The phase evolves linearly between frames:
+  [
+  \phi_{m+1,k} = \phi_{m,k} + \omega_k \frac{H}{f_s} + \Delta\phi_k
+  ]
+
+This works **well for stationary sinusoids**, but fails when:
+
+* multiple sinusoids overlap in the same bin (no separability),
+* instantaneous frequencies deviate from bin centers,
+* or when time–frequency localization is poor (blur and “phasiness”).
+
+So the phase vocoder is **an approximation**: it assumes the STFT bins already align with the signal’s true structure.
+
+---
+
+## 🔬 2. What Loris Does Differently
+
+Loris (and its precursor: *time–frequency reassignment*) **drops those assumptions**.
+It goes back to the physics of what a spectrogram really is — the *energy density* of a complex filter bank — and corrects for the STFT’s blurring by **re-centering energy** in time and frequency.
+
+### Core insight
+
+Each STFT coefficient ( X(t,\omega) = |X|e^{j\phi(t,\omega)} ) carries *phase derivative information*:
+
+* ( \frac{\partial \phi}{\partial t} ) → local **instantaneous frequency**
+* ( -\frac{\partial \phi}{\partial \omega} ) → local **group delay**
+
+Thus, every bin knows *where* its energy actually belongs in the time–frequency plane.
+
+### Loris builds on that:
+
+* Reassigns each coefficient to its true energy centroid ((\hat{t},\hat{f})).
+* Clusters nearby consistent points → partial trajectories.
+* Uses the true instantaneous phase evolution (not bin-based approximation).
+* Resynthesizes additively with phase-correct oscillators.
+
+In effect, Loris replaces the **“approximate subband phase tracking”** of the phase vocoder with a **differential, analytic model of phase evolution.**
+
+---
+
+## 🧠 3. Theoretical Completion
+
+From a signal theory standpoint, Loris **completes** the phase vocoder in three crucial ways:
+
+| Concept                 | Phase Vocoder                              | Loris / TFR                       |
+| ----------------------- | ------------------------------------------ | --------------------------------- |
+| Localization            | fixed bin centers                          | reassigned energy centroids       |
+| Instantaneous frequency | approximated by unwrapped phase difference | directly measured via ∂φ/∂t       |
+| Group delay (true time) | implicit / ignored                         | explicitly estimated via −∂φ/∂ω   |
+| Phase coherence         | fragile between bins                       | maintained analytically           |
+| Signal model            | piecewise-constant subband sinusoids       | continuous, analytic partials     |
+| Resynthesis             | overlap-add per bin                        | additive per partial (parametric) |
+
+So yes — **Loris is a complete, corrected, and generalized phase vocoder.**
+It obeys the same analytical framework (the STFT), but applies the *correct differential geometry* of phase space.
+
+---
+
+## 🧮 4. The Unified Mathematical View
+
+All these systems are built on the same object:
+[
+x(t) ;=; \Re \Big{ \int A(t,\omega) e^{j\phi(t,\omega)} , d\omega \Big}
+]
+
+* The **phase vocoder** assumes (A(t,\omega)) is stationary and (\phi(t,\omega)) evolves linearly within each bin.
+* **Loris** computes the true ( \frac{\partial \phi}{\partial t} ) and ( \frac{\partial \phi}{\partial \omega} ), recovers the local signal model around each point, and reconstructs the entire signal from those parameters.
+
+In that sense, Loris is to the phase vocoder what **Riemannian geometry** is to **Euclidean geometry** — it generalizes it to a curved (real) time–frequency manifold, where phase gradients define the local metric.
+
+---
+
+## 🎧 5. Practical Consequences
+
+Because of this “completion,” Loris yields:
+
+* **Sharper** time–frequency representations,
+* **Accurate** instantaneous frequencies (no bin quantization),
+* **Coherent** phase resynthesis (no phasiness),
+* **Trackable** partials and transient separation,
+* **Exact reversibility** of deterministic components.
+
+The traditional phase vocoder can only approximate these; Loris *computes* them directly.
+
+---
+
+## 🧩 6. The Big Picture
+
+If we imagine a spectrum of analysis models:
+
+```
+Time-domain analysis        →   PSOLA
+STFT-based (linear)         →   Phase Vocoder
+Perfect reconstruction      →   COLA / WOLA
+Phase-differential analysis →   Time-Frequency Reassignment
+Parametric reconstruction   →   Loris Additive Synthesis
+```
+
+Then **Loris sits at the top** — the point where the time–frequency model becomes a full parametric, invertible, and physically interpretable theory of the signal’s local oscillatory structure.
+
+---
+
+So yes — you can absolutely say:
+
+> **Loris is the completed, differential form of the phase vocoder.**
+> It doesn’t discard the phase vocoder — it *perfects* it, by grounding it in the true geometry of the STFT phase field.
+
+---
+
+Would you like me to write out the **unified mathematical derivation** showing how both the phase vocoder and Loris fall out of the same STFT-phase differential identity
+[
+\frac{\partial X}{\partial t} = j\omega X - h'(t) * x(t)
+]
+— i.e. the “missing link” that proves the phase vocoder equations are a first-order approximation of the reassignment equations?
+
 # Reference
 
 https://arxiv.org/pdf/0903.3080
