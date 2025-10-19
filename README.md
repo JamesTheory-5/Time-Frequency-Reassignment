@@ -754,6 +754,154 @@ Would you like me to take the next step — e.g.,
 🧪 **validate the model** with a synthetic chirp + pluck test (showing conventional vs. reassigned spectrograms and reconstructed waveform)?
 That’s the standard sanity check before we add stochastic residual modeling.
 
+# Spectral Audio
+
+Exactly — that’s the deep, unifying perspective.
+What you’re articulating is that **time–frequency reassignment (TFR)** and **Loris additive synthesis** aren’t just special cases — they’re part of the *general family of spectral models* that all live on the same mathematical backbone: the **Short-Time Fourier Transform (STFT)** and its phase structure.
+
+Let’s map that landscape clearly and conceptually.
+
+---
+
+## 🧩 1. The Shared Foundation: The STFT as an Operator
+
+All of these methods — phase vocoder, COLA, WOLA, PSOLA, Loris — are ways of **analyzing and resynthesizing signals** using *localized time–frequency representations.*
+
+The core object is the **STFT:**
+[
+X(t,\omega) = \int x(\tau),h^*(\tau - t),e^{-j\omega\tau},d\tau
+]
+Every algorithm differs in *how it uses or modifies* ( X(t,\omega) ) and its phase ( \phi(t,\omega) ).
+
+| Method                                | Uses STFT?     | Key Innovation                                                                             |
+| ------------------------------------- | -------------- | ------------------------------------------------------------------------------------------ |
+| **Phase Vocoder**                     | ✅              | Modifies STFT phase increment to stretch or shift time/frequency.                          |
+| **COLA (Constant Overlap-Add)**       | ✅              | Ensures perfect reconstruction when windowed overlap-adding.                               |
+| **WOLA (Weighted Overlap-Add)**       | ✅              | Generalized COLA with weighting windows and analysis/synthesis duality.                    |
+| **PSOLA (Pitch-Synchronous OLA)**     | ✅ (implicitly) | Uses analysis windows aligned to pitch periods (not uniform hop).                          |
+| **Loris**                             | ✅              | Uses *time–frequency reassignment* to relocate energy centers before additive resynthesis. |
+| **Time–Frequency Reassignment (TFR)** | ✅              | Refines STFT’s energy localization by using phase derivatives.                             |
+
+So, all these are **spectral-domain signal models** that interpret, modify, or reconstruct ( X(t,\omega) ) differently.
+
+---
+
+## 🔭 2. The Key Distinctions
+
+### **Phase Vocoder**
+
+* Treats each STFT bin as a “sub-band channel.”
+* Propagates phase by unwrapping between frames:
+  [
+  \phi_{t+1,k} = \phi_{t,k} + \omega_k \frac{H}{fs} + \Delta\phi_k
+  ]
+* Great for time-stretching and pitch-shifting.
+* Weakness: assumes energy is centered in the bin → **blur and phasiness.**
+
+### **Time–Frequency Reassignment**
+
+* Corrects that: computes where energy *actually* lies by moving each bin to its **instantaneous frequency** and **group delay**.
+* Yields high-precision time–frequency localization.
+* The reassignment fields ((\hat{t}, \hat{f})) can directly drive an additive model (Loris), or improve visualizations (sharper spectrograms).
+
+### **Loris Additive Synthesis**
+
+* Builds directly on TFR:
+
+  * Extracts *reassigned energy centers* (true ridges).
+  * Tracks them over time as *partials.*
+  * Uses phase-correct oscillators for resynthesis.
+* Essentially a **phase vocoder at infinite frequency resolution**, operating on *parametric ridges* rather than bins.
+
+### **WOLA / COLA**
+
+* Concerned with **perfect reconstruction** via dual windows:
+  [
+  x[n] = \sum_m h_a[n - mH],h_s[n - mH]
+  ]
+  ensuring energy sums to unity.
+* Loris resynthesis fits into this family conceptually — it’s just using *non-uniform*, *phase-aware* reconstruction instead of linear overlap-add.
+
+### **PSOLA**
+
+* Time-domain analog: segments around pitch periods, resynthesizes by overlap-adding with pitch-dependent spacing.
+* It’s the *time-domain counterpart* to additive resynthesis — both rely on **phase coherence and local stationarity.**
+
+---
+
+## 🧠 3. How They Connect Conceptually
+
+Let’s visualize their relationships:
+
+```
+             ┌──────────────────────────────┐
+             │        STFT Framework        │
+             └──────────────────────────────┘
+                        │
+     ┌──────────────────┼───────────────────┐
+     │                  │                   │
+  Phase Vocoder      TFR + Loris           OLA / WOLA
+ (bin-based)       (ridge-based)        (window summation)
+     │                  │                   │
+  bin phase          phase gradient       dual windows
+  updates            energy centroid      perfect recon.
+     │                  │                   │
+  time-stretch        additive resynth.     linear overlap
+  pitch-shift         morphing, analysis    PSOLA links here
+```
+
+Every node here shares:
+
+* The same **analysis operator** (STFT),
+* The same **phase continuity laws**, and
+* Different **interpretations of the phase gradient**.
+
+---
+
+## 🔬 4. Where Loris + TFR Excel
+
+Loris + TFR outperform standard phase vocoders in scenarios where:
+
+* You need **precise localization** (transients, chirps, inharmonic content).
+* You want to **avoid spectral smearing** (typical “phasiness”).
+* You require **additive control** — the ability to morph, time-stretch, and resynthesize **each partial** with phase accuracy.
+
+Essentially, **Loris turns the STFT into a perceptually meaningful additive model** by:
+
+1. **Reassigning** bins → analytic energy centers.
+2. **Tracking** them → physically meaningful partials.
+3. **Resynthesizing** → exact-phase additive oscillator bank.
+
+---
+
+## ⚡ 5. The Unified View (Mathematically)
+
+All these methods can be expressed as instances of:
+[
+x[n] = \sum_m \int_{\omega} A(m,\omega),e^{j(\phi(m,\omega) + \omega n)},d\omega
+]
+
+* **Phase vocoder**: approximates ( A ) as constant in bins.
+* **TFR**: computes ( A ) at reassigned ((t,\omega)).
+* **Loris**: parametrizes ( A ) as smooth partial tracks.
+* **WOLA/PSOLA**: discretize ( t ) adaptively or synchronously.
+
+---
+
+## 🧩 6. Where This Leads
+
+Now that you’ve implemented both TFR and Loris, you’re sitting at the **nexus** of the spectral methods family.
+You can build next-generation hybrid models:
+
+* **Reassigned Phase Vocoder** (replace bin centers with reassigned centroids).
+* **Phase-coherent Morphing** (interpolate partial tracks across sounds).
+* **Additive + WOLA hybrid** (Loris-style deterministic + WOLA residual).
+* **Learning-based TFR** (neural spectral models that use reassignment features).
+
+---
+
+Would you like me to diagram this conceptual “family tree” of spectral models (showing how TFR/Loris fit within PV, WOLA, PSOLA), or build a mathematical *unification framework* (a single STFT-operator-based equation from which all these fall out as special cases)?
+
 # Reference
 
 https://arxiv.org/pdf/0903.3080
