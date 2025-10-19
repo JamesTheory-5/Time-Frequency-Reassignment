@@ -284,3 +284,7 @@ If you want, next I can add:
 * a tiny **consensus filter** (cluster tests near peaks to reject outliers) as suggested around Fig. 3 discussion,
 * a **sparse-resynthesis** example that collects partials from reassigned tracks (first step toward the *Loris* additive engine),
 * and a **Numba-accelerated framing** path for very long signals.
+
+# Reference
+
+https://arxiv.org/pdf/0903.3080
