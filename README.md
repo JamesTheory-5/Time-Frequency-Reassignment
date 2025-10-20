@@ -1,5 +1,160 @@
 # Time-Frequency-Reassingment
 
+Here’s a **conceptual and mathematical overview** of the paper *“A Unified Theory of Time-Frequency Reassignment”* by Kelly R. Fitz and Sean A. Fulop.
+
+---
+
+## 🧠 Conceptual Overview
+
+### 1. Purpose and Motivation
+
+Traditional **spectrograms**, derived from the Short-Time Fourier Transform (STFT), are limited by the **Heisenberg uncertainty principle**, which forces a tradeoff between **time and frequency resolution**.
+
+* A narrow window gives good time but poor frequency resolution.
+* A wide window does the opposite.
+
+**Time-Frequency Reassignment (TFR)** sharpens this blurred representation by moving (reassigning) the spectral energy at each point ((t, \omega)) to its **true center of energy** in the time-frequency plane.
+
+---
+
+### 2. The Core Idea: Reassignment as “Energy Refocusing”
+
+Each point in a standard spectrogram ( |X(t,\omega)|^2 ) represents energy blurred by the window.
+Reassignment calculates where that energy **should actually belong** — the “center of gravity” of that energy distribution.
+This refocusing relies on the **local phase derivatives** of the STFT, which encode how the phase changes across time and frequency.
+
+---
+
+### 3. Connection to Physical Interpretation
+
+* **Time reassignment** corresponds to **group delay** — the average arrival time of a spectral component.
+* **Frequency reassignment** corresponds to **instantaneous frequency** — the local rate of change of phase.
+* Together, these map the observed energy to where it would appear in an ideal time-frequency representation.
+
+---
+
+### 4. The Filterbank View
+
+The STFT can be seen as a **bank of complex bandpass filters**, each centered at frequency (\omega) with impulse response (h_\omega(t) = h(t) e^{j\omega t}).
+In this view, reassignment corrects for **phase distortions** introduced by these filters, bringing energy back to the true location of the underlying signal events.
+
+---
+
+### 5. Applications
+
+Reassignment improves:
+
+* **Clarity of spectrograms** (e.g., speech and music analysis)
+* **Instantaneous frequency tracking**
+* **Signal synthesis** and reconstruction (phase-correct additive models)
+* **Despeckling** by removing unreliable or noise-dominated points.
+
+---
+
+## 🧮 Mathematical Framework
+
+### 1. Short-Time Fourier Transform (STFT)
+
+[
+X(t, \omega) = \int x(\tau) h^*(\tau - t) e^{-j\omega\tau} d\tau
+]
+where:
+
+* (x(t)) = signal
+* (h(t)) = analysis window
+* (X(t, \omega)) = complex STFT
+
+Spectrogram:
+[
+S(t, \omega) = |X(t, \omega)|^2
+]
+
+---
+
+### 2. Reassigned Coordinates
+
+The **reassigned time** and **frequency** coordinates are derived from **phase derivatives**:
+[
+\hat{t}(t,\omega) = t - \frac{\partial \phi(t,\omega)}{\partial \omega}
+]
+[
+\hat{\omega}(t,\omega) = \omega + \frac{\partial \phi(t,\omega)}{\partial t}
+]
+where (\phi(t,\omega)) is the phase of (X(t,\omega)).
+
+---
+
+### 3. Efficient Computation (Auger & Flandrin Formulation)
+
+To avoid direct numerical differentiation, the derivatives are computed from **auxiliary STFTs**:
+[
+\hat{t}(t,\omega) = t - \Re!\left{\frac{X_{T_h}(t,\omega) X^*(t,\omega)}{|X(t,\omega)|^2}\right}
+]
+[
+\hat{\omega}(t,\omega) = \omega + \Im!\left{\frac{X_{D_h}(t,\omega) X^*(t,\omega)}{|X(t,\omega)|^2}\right}
+]
+where:
+
+* (X_{T_h}): STFT with **time-weighted window** (T_h(t) = t,h(t))
+* (X_{D_h}): STFT with **derivative window** (D_h(t) = \frac{dh(t)}{dt})
+
+These require only **three STFTs** and no finite-difference approximations.
+
+---
+
+### 4. Window Derivative Construction
+
+The derivative window (D_h(t)) is computed via:
+[
+D_h(t) = \mathcal{F}^{-1}{ j\omega H(\omega) }
+]
+or in discrete form:
+[
+h_D(n) = -\text{IFFT}{ 2\pi k / N \cdot H(k) }
+]
+where (H(\omega)) is the Fourier transform of the analysis window.
+
+---
+
+### 5. Practical Conditions
+
+Reassignment assumes **local separability** — i.e., that each time-frequency cell represents one dominant component.
+If multiple components overlap within a window, reassignment can produce misleading results.
+
+---
+
+### 6. Summary of Meaning
+
+* ( \hat{t}(t,\omega)): the **true time center** of the energy at ((t,\omega))
+* ( \hat{\omega}(t,\omega)): the **true frequency center**
+* Both derived from **phase gradients** of the STFT
+* Resulting spectrogram: sharper, sparser, and more physically meaningful.
+
+---
+
+## 🧩 Conceptual Summary Diagram (textual)
+
+```
+Input signal x(t)
+        ↓
+Windowed STFT → X(t, ω) = M e^{jφ}
+        ↓
+Phase gradients:
+   ∂φ/∂ω → time reassignment
+   ∂φ/∂t → freq reassignment
+        ↓
+Reassigned coordinates:
+   (t̂, ω̂)
+        ↓
+Sharper spectrogram |X(t̂, ω̂)|²
+```
+
+---
+
+Would you like me to extend this into a **2-page illustrated summary** (with equations, diagrams, and conceptual sections suitable for a presentation or study notes)?
+
+---
+
 Awesome—let’s build a minimal, fast, and clean **time–frequency reassignment** toolkit in Python using **NumPy (vectorized)** + **Numba JIT**. It follows the paper’s math:
 
 * Reassigned time (group delay): (\hat t = t - \partial_\omega \phi)
