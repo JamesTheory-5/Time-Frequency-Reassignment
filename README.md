@@ -1193,6 +1193,154 @@ Would you like me to write out the **unified mathematical derivation** showing h
 ]
 — i.e. the “missing link” that proves the phase vocoder equations are a first-order approximation of the reassignment equations?
 
+---
+
+Absolutely — that’s the next logical step: show *mathematically* that
+the **phase vocoder** is a *first-order approximation* of the **reassignment / Loris** model.
+
+Here’s the unified derivation.
+
+---
+
+## 1. Start from the STFT
+
+[
+X(t,\omega)=\int x(\tau),h^*(\tau-t),e^{-j\omega\tau},d\tau
+]
+Let (x(\tau)=A(\tau)e^{j\theta(\tau)}) be locally sinusoidal.
+
+---
+
+## 2. Differentiate w.r.t. time
+
+Using Leibniz and the chain rule,
+[
+\frac{\partial X}{\partial t}
+=\int x(\tau),h'^*(\tau-t),e^{-j\omega\tau},d\tau
+=-,x*h'(t),e^{-j\omega t}
+]
+so, after dividing by (X),
+[
+\frac{\partial_t X}{X}= j,\omega_i(t,\omega)-\frac{h'(t)}{h(t)}+O(\text{higher})
+]
+and the **imaginary part** gives the *instantaneous frequency* term.
+
+---
+
+## 3. Differentiate w.r.t. frequency
+
+[
+\frac{\partial X}{\partial \omega}
+=-j!\int \tau,x(\tau),h^*(\tau-t),e^{-j\omega\tau}d\tau
+=-j,X_{T_h}(t,\omega)
+]
+where (T_h(\tau)=\tau h(\tau)).
+Hence
+[
+-\Re!\left{\frac{X_{T_h}}{X}\right}
+=-\frac{\partial \phi}{\partial \omega}
+=\hat t - t
+]
+the **group-delay (time-reassignment)** term.
+
+---
+
+## 4. Phase-gradient identities
+
+Collecting the two:
+[
+\boxed{
+\begin{aligned}
+\hat t &= t - \Re!\left{\frac{X_{T_h},X^*}{|X|^2}\right},[3pt]
+\hat\omega &= \omega + \Im!\left{\frac{X_{D_h},X^*}{|X|^2}\right},
+\end{aligned}}
+]
+where (D_h(t)=\frac{d h}{dt}).
+These are the exact reassignment equations (Loris Eq. 28–29).
+
+---
+
+## 5. Phase-vocoder limit
+
+For a *stationary sinusoid* of constant frequency (\omega_0),
+
+[
+X(t,\omega)\approx A,e^{j[(\omega_0-\omega)t+\phi_0]}H(\omega-\omega_0)
+]
+
+so that
+[
+\frac{\partial\phi}{\partial t}\approx\omega_0,\qquad
+\frac{\partial\phi}{\partial\omega}\approx -t .
+]
+
+If we linearize the true phase field about the STFT grid point ((t_m,\omega_k)):
+
+[
+\phi(t,\omega)\approx
+\phi_{m,k}
++\partial_t\phi, (t-t_m)
++\partial_\omega\phi,(\omega-\omega_k)
+]
+
+and sample it every hop (H),
+
+[
+\Delta\phi_{m,k}\approx
+\partial_t\phi,H
++(\partial_\omega\phi),\Delta\omega.
+]
+
+The **phase-vocoder update**
+[
+\phi_{m+1,k}=\phi_{m,k}
++\omega_k\frac{H}{f_s}
++\underbrace{(\Delta\phi_{m,k}-\omega_kH/f_s)}_{\text{“true freq – bin freq”}}
+]
+is precisely the *first-order finite-difference* approximation of
+(\partial_t\phi=\hat\omega-\omega).
+Hence:
+
+[
+\boxed{\text{Phase Vocoder }=\text{ Loris / Reassignment to first order in time.}}
+]
+
+---
+
+## 6. Completion by Loris
+
+Loris keeps the *full differential form* instead of linearizing:
+
+| Term               | Phase-Vocoder (approx.)    | Loris / Reassignment (exact)       |
+| ------------------ | -------------------------- | ---------------------------------- |
+| Instantaneous freq | finite-difference of phase | (\hat\omega=\omega+\partial_t\phi) |
+| Group delay (time) | frame center only          | (\hat t=t-\partial_\omega\phi)     |
+| Phase evolution    | linear bin model           | analytic phase gradient            |
+| Resynthesis        | overlap-add per bin        | additive oscillators per partial   |
+
+So Loris generalizes the phase vocoder from a discrete,
+piecewise-linear sub-band model to a **continuous differential model**
+of the STFT’s phase geometry.
+
+---
+
+### 👉 Summary equation
+
+[
+\boxed{
+\begin{aligned}
+\text{Phase Vocoder:}&\quad
+\phi_{m+1,k}\approx\phi_{m,k}
++\tfrac{H}{f_s},\hat\omega_{m,k} [4pt]
+\text{Loris / TFR:}&\quad
+\hat\omega_{m,k}= \omega_k+\partial_t\phi,\qquad
+\hat t_{m,k}=t_m-\partial_\omega\phi
+\end{aligned}}
+]
+
+Thus, **the phase vocoder is the finite-difference limit of Loris**,
+and **Loris is the exact, differential completion** — the *final phase vocoder.*
+
 # Reference
 
 https://arxiv.org/pdf/0903.3080
