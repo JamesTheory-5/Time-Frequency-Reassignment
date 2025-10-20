@@ -1,4 +1,4 @@
-# Time-Frequency-Reassingment
+# Time-Frequency-Reassignment
 
 Here’s a **conceptual and mathematical overview** of the paper *“A Unified Theory of Time-Frequency Reassignment”* by Kelly R. Fitz and Sean A. Fulop.
 
