@@ -1527,6 +1527,168 @@ a system that unifies *analysis, modification, and synthesis* within the same di
 Would you like me to extend this API with **vibrato / amplitude modulation**, **time-localized envelopes**, and a **residual-noise model** (to support complete *Spectral Modeling Synthesis* à la Serra)?
 That’s the natural next step to make it a full *hybrid Loris–SMS synthesizer.*
 
+---
+
+Yes.
+And in fact — this is where everything *is* converging.
+What you’ve built (Loris-style, differential, phase-coherent additive analysis) is **the exact analytical backbone** that modern neural audio systems like **DDSP, neural vocoders, and transformer-based spectral models** are rediscovering — but with learned components instead of explicit ones.
+
+Let’s unpack how this connects and how you can *extend it all the way into modern neural architectures.*
+
+---
+
+## 🧩 1. The shared abstraction
+
+Every neural audio model ultimately deals with this same fundamental mapping:
+
+[
+x(t);\leftrightarrow;{a_i(t), f_i(t), \phi_i(t)}
+]
+
+That is — **decompose a waveform into controllable sinusoids (and noise)**,
+then **learn how to predict or generate** their parameters.
+
+| System                                                      | Underlying representation                 | Equivalent in your Loris model                    |
+| ----------------------------------------------------------- | ----------------------------------------- | ------------------------------------------------- |
+| DDSP (Differentiable DSP, 2020)                             | Harmonic + noise additive model           | Partial trajectories (a_i(t), f_i(t))             |
+| Neural vocoders (HiFi-GAN, BigVGAN, etc.)                   | Learned filterbank magnitudes / phases    | Time-frequency energy + phase derivatives         |
+| Neural spectral encoders (Jukebox, MusicLM, AudioLDM, etc.) | Learned latent embeddings of spectrograms | Latent space over partial parameter distributions |
+| Phase-aware transformers (Gaia, AudioLM2, etc.)             | Implicit phase modeling                   | Explicit (φ_i(t)) evolution in Loris              |
+
+So what you have is **the analytic, interpretable version of what deep nets learn implicitly**.
+
+---
+
+## 🔬 2. How to connect Loris → Neural networks
+
+### **A. As a *front-end representation***
+
+You can use your `loris_analyze()` to convert audio into structured, low-dimensional, *differentiable* data:
+
+[
+\text{Input: } x[n]
+\quad\Rightarrow\quad
+\text{Features: } { a_i(t), f_i(t), \text{residual}(t)}
+]
+
+Then feed those trajectories to a network that learns mappings such as:
+
+* timbre transfer (map partial envelopes of source → target),
+* expressive control (predict vibrato, attack shapes, etc.),
+* generative priors (transformer models partial sequences).
+
+Because they’re **continuous** and **phase-aligned**, networks can learn on far smaller, more meaningful data — not 100 kHz waveforms.
+
+### **B. As a *differentiable synthesizer***
+
+Your `resynthesize_tracks()` can be rewritten in PyTorch or JAX using differentiable trigonometric ops:
+
+```python
+y = sum_i a_i(t) * sin(2π * integrate(f_i(t)) + φ_i0)
+```
+
+That’s literally **DDSP’s core layer**.
+
+You can train end-to-end systems that:
+
+* take MIDI / conditioning → predict (a_i(t), f_i(t)),
+* feed them into this differentiable synthesis layer,
+* minimize loss against real audio.
+
+### **C. As a *target for transformers***
+
+Transformers can model sequences of **partial parameter frames**:
+[
+[;a_{1:T,i}, f_{1:T,i};] \in \mathbb{R}^{2T\times N}
+]
+where each token encodes a partial’s local state.
+This gives you a *music-scale symbolic layer* above waveform level.
+
+---
+
+## 🚀 3. Neural-Loris pipeline overview
+
+```
+        ┌──────────────────────────┐
+        │     Raw audio (x[n])     │
+        └──────────┬───────────────┘
+                   ▼
+      Loris analysis (reassigned STFT)
+                   ▼
+   Partial trajectories {a_i(t), f_i(t)}
+                   ▼
+        ┌──────────────────────┐
+        │ Neural model (MLP /  │
+        │ Transformer / DDSP)  │
+        └──────────────────────┘
+                   ▼
+      Modified / generated parameters
+                   ▼
+        Loris differentiable resynth
+                   ▼
+             Output waveform
+```
+
+---
+
+## 🧠 4. Conceptual unification
+
+| Layer            | Old (Signal Processing) | New (Neural)                  | Bridge                            |
+| ---------------- | ----------------------- | ----------------------------- | --------------------------------- |
+| STFT             | Linear filterbank       | Learned convolutional encoder | Your reassignment analysis        |
+| Additive model   | Oscillator bank         | DDSP harmonic synthesizer     | Your resynth core                 |
+| Envelope shaping | ADSR, filters           | Neural MLP controllers        | `a_i(t)` networks                 |
+| Modulation       | LFOs, vibrato           | Attention / latent modulation | transformer attention on partials |
+| Morphing         | Parameter interpolation | Latent interpolation          | `morph()` ↔ latent mixing         |
+
+So, yes: you already have the **structured, interpretable DDSP front end** — with exact phase math instead of an approximate harmonic model.
+
+---
+
+## 🔧 5. How to make it neural-ready (practical steps)
+
+1. **Port to PyTorch / JAX**
+
+   * Replace NumPy ops with differentiable equivalents.
+   * Wrap the resynth in a `torch.autograd.Function`.
+
+2. **Batchify partials**
+
+   * Represent partial trajectories as tensors `[batch, partials, time, features]`.
+
+3. **Trainable modules**
+
+   * MLP/Transformer predicting partial parameters.
+   * Optional learned residual-noise filter (1-D conv stack).
+
+4. **Losses**
+
+   * Spectral loss (multi-resolution STFT magnitude).
+   * Phase-aware loss via reassignment field matching.
+   * Optional perceptual loss.
+
+5. **Applications**
+
+   * Timbre transfer (condition on target).
+   * Style morphing (interpolate embeddings).
+   * Expressive synthesis from symbolic inputs.
+
+---
+
+## 🧭 6. Why this matters
+
+* Your model is **interpretable** (every neuron maps to real physics: amplitude, frequency).
+* It’s **differentiable** end-to-end — perfect for gradient learning.
+* It bridges **classic signal theory** and **modern deep learning**.
+* And it supports **both analysis and generation** with exact phase.
+
+So yes — this can *absolutely* go all the way:
+→ **Loris-DDSP hybrid** → **Additive Transformer** → **Phase-coherent generative instrument**.
+
+---
+
+If you’d like, I can sketch the **PyTorch implementation** of a differentiable Loris synthesizer block (the “DDSP core”) next — ready to drop into a transformer training loop. Would you like me to do that?
+
 # Reference
 
 https://arxiv.org/pdf/0903.3080
